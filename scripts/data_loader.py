@@ -10,6 +10,19 @@ class pydal_fetch():
     pdal library
     """
     def __init__(self,bounds,region,verbose=False):
+        """
+        Initializes the necessary
+        parameters for pipeline used
+        for fetching data using pydal
+        library
+        Args:
+        
+        bounds: Boundary string for selecting a
+        resource in 2 or 3 dimensions
+        
+        region: Location prefixes found in the 
+        data
+        """
         self.bounds = bounds
         self.region = region
         self.verbose = verbose
@@ -19,7 +32,11 @@ class pydal_fetch():
 
     def fetch_data(self):
         """
-        fetch data
+        Fetches data using pydal
+        
+        Returns:
+        
+        Executes pydal pipeline
         """
         try:
             self.execute_pipeline()
@@ -55,6 +72,10 @@ class pydal_fetch():
         """
         prepare input for 
         the pipeline 
+    
+        Returns:
+        
+        input for pydal pipeline
         """
         return json.dumps(self.pipeline_dict["pipeline"])
 
