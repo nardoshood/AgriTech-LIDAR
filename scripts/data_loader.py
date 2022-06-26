@@ -2,6 +2,9 @@ import pdal
 import json
 import os
 from helper_methods import read_json  as read_pipeline
+from helper_methods import convert_to_geodf
+import pandas as pd
+from geopandas import GeoDataFrame as gdf
 
 class pydal_fetch():
     """
@@ -9,7 +12,7 @@ class pydal_fetch():
     data fetching using 
     pdal library
     """
-    def __init__(self,bounds,region,verbose=False):
+    def __init__(self,polygon,region,filename="",output_filename="",verbose=False):
         """
         Initializes the necessary
         parameters for pipeline used
@@ -23,11 +26,19 @@ class pydal_fetch():
         region: Location prefixes found in the 
         data
         """
-        self.bounds = bounds
+        # self.bounds = bounds
         self.region = region
+        self.polygon = polygon
         self.verbose = verbose
         self.data_location = os.path.join("https://s3-us-west-2.amazonaws.com/usgs-lidar-public",self.region,"ept.json")
+        if filename:
+            self.data_location = filename
         self.pipeline_path = "../data/pipline.json"
+        output_filename = self.region
+        if output_filename:
+            self.output_filename = output_filename
+        self.output_laz_filename = output_filename + ".las"
+        self.output_raster_filename = output_filename + ".tiff"
         self.prepare_pipeline()
 
     def fetch_data(self):
@@ -49,6 +60,17 @@ class pydal_fetch():
             print("Failed to execute.")
             print(e)
 
+    def generate_bound_from_polygon(self):
+        """
+        Generate a bound that
+        encompasses the user
+        defined polygon
+        """
+        print(type(self.polygon))
+        polygon_df = gdf([self.polygon],columns=["geometry"])
+        XMIN,YMIN,XMAX,YMAX = polygon_df.geometry[0].bounds
+        return f"([{XMIN},{XMAX}],[{YMAX},{YMAX}])"
+
     def prepare_pipeline(self):
         """
         prepare pipeline
@@ -57,16 +79,21 @@ class pydal_fetch():
         """
         self.pipeline_dict = read_pipeline(self.pipeline_path)
         self.pipeline_dict["pipeline"][0]["filename"] = self.data_location
-        self.pipeline_dict["pipeline"][0]["bounds"] = self.bounds
+        self.pipeline_dict["pipeline"][0]["bounds"] = self.generate_bound_from_polygon()
+        self.pipeline_dict["pipeline"][1]["polygon"] = str(self.polygon)
+        self.pipeline_dict["pipeline"][-2]["filename"] = self.output_raster_filename
+        self.pipeline_dict["pipeline"][-1]["filename"] = self.output_laz_filename
         pipeline_input = self.prepare_pipeline_output()
         try:
             self.pipeline = pdal.Pipeline(pipeline_input)
             if self.verbose:
                 print(pipeline_input)
+                # return
         except Exception as e:
             print("Failed to prepare the pipeline.")
             print(e)
-        # self.pipeline_dict["pipeline"][0]["filename"] = self.filename
+            exit(0)
+        # self.return_geodf()
 
     def prepare_pipeline_output(self):
         """
@@ -84,6 +111,15 @@ class pydal_fetch():
         execute pipeline
         """
         self.pipeline.execute()
+
+    def return_geodf(self):
+        arrays = self.pipeline.arrays
+        pipeline_array = arrays.pop()
+        results = [pipeline_array[['X','Y','Z']][i] for i,x in enumerate(pipeline_array)]
+        df = pd.DataFrame({'elevation': [x[2] for x in results]})
+        gdf = gdf(df, geometry=gpd.points_from_xy([x[1] for x in results], 
+                                                           [x[0] for x in results]))
+        return results,gdf
 
     def pipeline_info(self):
         """
