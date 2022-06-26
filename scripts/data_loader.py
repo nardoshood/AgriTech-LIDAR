@@ -4,7 +4,8 @@ import os
 from helper_methods import read_json  as read_pipeline
 from helper_methods import convert_to_geodf
 import pandas as pd
-from geopandas import GeoDataFrame as gdf
+import geopandas as gpd
+
 
 class pydal_fetch():
     """
@@ -37,8 +38,8 @@ class pydal_fetch():
         output_filename = self.region
         if output_filename:
             self.output_filename = output_filename
-        self.output_laz_filename = output_filename + ".las"
-        self.output_raster_filename = output_filename + ".tiff"
+        self.output_las_filename = output_filename + ".laz"
+        self.output_raster_filename = output_filename + ".tif"
         self.prepare_pipeline()
 
     def fetch_data(self):
@@ -67,9 +68,9 @@ class pydal_fetch():
         defined polygon
         """
         print(type(self.polygon))
-        polygon_df = gdf([self.polygon],columns=["geometry"])
+        polygon_df = gpd.GeoDataFrame([self.polygon],columns=["geometry"])
         XMIN,YMIN,XMAX,YMAX = polygon_df.geometry[0].bounds
-        return f"([{XMIN},{XMAX}],[{YMAX},{YMAX}])"
+        return f"([{XMIN},{XMAX}],[{YMIN},{YMAX}])"
 
     def prepare_pipeline(self):
         """
@@ -81,8 +82,8 @@ class pydal_fetch():
         self.pipeline_dict["pipeline"][0]["filename"] = self.data_location
         self.pipeline_dict["pipeline"][0]["bounds"] = self.generate_bound_from_polygon()
         self.pipeline_dict["pipeline"][1]["polygon"] = str(self.polygon)
-        self.pipeline_dict["pipeline"][-2]["filename"] = self.output_raster_filename
-        self.pipeline_dict["pipeline"][-1]["filename"] = self.output_laz_filename
+        self.pipeline_dict["pipeline"][-2]["filename"] = self.output_las_filename
+        self.pipeline_dict["pipeline"][-1]["filename"] = self.output_raster_filename
         pipeline_input = self.prepare_pipeline_output()
         try:
             self.pipeline = pdal.Pipeline(pipeline_input)
@@ -117,7 +118,7 @@ class pydal_fetch():
         pipeline_array = arrays.pop()
         results = [pipeline_array[['X','Y','Z']][i] for i,x in enumerate(pipeline_array)]
         df = pd.DataFrame({'elevation': [x[2] for x in results]})
-        gdf = gdf(df, geometry=gpd.points_from_xy([x[1] for x in results], 
+        gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy([x[1] for x in results], 
                                                            [x[0] for x in results]))
         return results,gdf
 
