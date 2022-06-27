@@ -8,24 +8,6 @@ import numpy as np
 import geopandas as gpd
 from shapely.geometry import box
 
-# taken from https://medium.com/@tutorialcreation81/geolidar-tool-for-loading-lidar-data-81c930bd35f6
-
-def plot_raster(self,rast_data, title='', figsize=(10,10)):
-        """
-        Plots population count in log scale(+1)
-        args:
-            rast_data (np arrray): an array of the raster image
-            title (str): the title of the image
-            figsize (tuple): scale of the image to be displayed
-        returns:
-            pyplot image
-        """
-        plt.figure(figsize = figsize)
-        im1 = plt.imshow(np.log1p(rast_data),) # vmin=0, vmax=2.1)
-
-        plt.title("{}".format(title), fontdict = {'fontsize': 20})  
-        plt.axis('off')
-        plt.colorbar(im1, fraction=0.03)
 
 def show_raster(path_to_raster):
     """
@@ -42,7 +24,10 @@ def show_raster(path_to_raster):
     show((raster_src.read(1)),ax=axraster)
     plt.show()
 
+    
+
 def plot_3d_map(results):
+    # taken from https://medium.com/@tutorialcreation81/geolidar-tool-for-loading-lidar-data-81c930bd35f6
     """
     plotting of a 3d map
     args: 
@@ -64,3 +49,15 @@ def plot_3d_map(results):
     ax.set_ylabel('lat')
     ax.set_zlabel('elevation')
     plt.show()
+
+def visualize_plotly(data):
+    """
+    generate 3d plot
+    using plotly
+    """
+    fig = go.Figure(data=[go.Surface(z=data.loc[:1000000,:].values)])
+    fig.update_layout(title='3D plot', autosize=False,
+                    width=500, height=500,
+                    margin=dict(l=65, r=50, b=65, t=90))
+
+    fig.show()
